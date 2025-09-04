@@ -277,28 +277,28 @@
                         
                         <!-- Performance Stats -->
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                            <div class="p-5 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                            <div class="p-5 rounded-lg shadow-sm text-center" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
                                 <h3 class="text-sm font-medium" style="color: var(--text-secondary);">Net P&L</h3>
                                 <p id="db-net-pnl" class="text-2xl font-bold mt-2" style="color: var(--text-primary);">₹0.00</p>
                                 <p id="db-total-trades" class="text-xs" style="color: var(--text-muted);">0 trades</p>
                             </div>
-                            <div class="p-5 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                            <div class="p-5 rounded-lg shadow-sm text-center" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
                                 <h3 class="text-sm font-medium" style="color: var(--text-secondary);">Win Rate</h3>
                                 <p id="db-win-rate" class="text-2xl font-bold mt-2" style="color: var(--text-primary);">0%</p>
-                                <div class="flex items-center text-xs" style="color: var(--text-muted);">
+                                <div class="flex items-center justify-center text-xs" style="color: var(--text-muted);">
                                     <span id="db-won-trades" class="text-green-500 mr-2">0 won</span>
                                     <span id="db-lost-trades" class="text-red-500">0 lost</span>
                                 </div>
                             </div>
-                            <div class="p-5 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                            <div class="p-5 rounded-lg shadow-sm text-center" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
                                 <h3 class="text-sm font-medium" style="color: var(--text-secondary);">Profit Factor</h3>
                                 <p id="db-profit-factor" class="text-2xl font-bold mt-2" style="color: var(--text-primary);">0.00</p>
                                 <p class="text-xs" style="color: var(--text-muted);">Gross P&L split</p>
                             </div>
-                            <div class="p-5 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                            <div class="p-5 rounded-lg shadow-sm text-center" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
                                 <h3 class="text-sm font-medium" style="color: var(--text-secondary);">Avg win/loss trade</h3>
                                 <p id="db-avg-win-loss" class="text-2xl font-bold mt-2" style="color: var(--text-primary);">0.00</p>
-                                <div class="flex items-center text-xs" style="color: var(--text-muted);">
+                                <div class="flex items-center justify-center text-xs" style="color: var(--text-muted);">
                                     <span id="db-avg-win" class="text-green-500 mr-2">+₹0.00</span>
                                     <span id="db-avg-loss" class="text-red-500">-₹0.00</span>
                                 </div>
