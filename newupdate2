@@ -196,6 +196,31 @@
         /* Special case for the Rupee symbol which is not a feather icon */
         .nav-item[data-page="fund-management"]:not(.active) i { color: #10b981; /* emerald-500 */ }
 
+        /* Light background for weekday headers (Sun–Sat) */
+        .weekday-header {
+          background-color: #f5f5f5 !important;
+          border: 2px solid #ccc !important; /* stronger outline */
+          color: #333;
+          border-radius: 6px;
+        }
+
+        /* Light background + visible outline for date boxes */
+        .date-box {
+          background-color: #fafafa !important;
+          border: 2px solid #bbb !important; /* more visible border */
+          border-radius: 6px;
+          color: #222;
+        }
+
+        /* Light background + visible outline for weekly summary boxes */
+        .week-summary {
+          background-color: #f5f5f5 !important;
+          border: 2px solid #999 !important; /* darker border for emphasis */
+          border-radius: 10px;
+          color: #111;
+          padding: 6px;
+        }
+
     </style>
 </head>
 <body class="antialiased">
@@ -495,13 +520,13 @@
                                         <!-- Main calendar part (7 columns) -->
                                         <div class="flex-grow">
                                             <div class="grid grid-cols-7 gap-2 p-2 text-center text-sm font-medium" style="color: var(--text-secondary);">
-                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2">Sun</div>
-                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2">Mon</div>
-                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2">Tue</div>
-                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2">Wed</div>
-                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2">Thu</div>
-                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2">Fri</div>
-                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2">Sat</div>
+                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2 weekday-header">Sun</div>
+                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2 weekday-header">Mon</div>
+                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2 weekday-header">Tue</div>
+                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2 weekday-header">Wed</div>
+                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2 weekday-header">Thu</div>
+                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2 weekday-header">Fri</div>
+                                                <div class="bg-gray-100 dark:bg-gray-800/80 rounded-md py-2 weekday-header">Sat</div>
                                             </div>
                                             <div id="calendar-grid-days" class="p-2">
                                                 <!-- JS will create week rows here, each being a grid-cols-7 -->
@@ -1713,7 +1738,7 @@
                          const pnlTextColor = pnl > 0 ? 'text-green-600 dark:text-green-400' : pnl < 0 ? 'text-red-600 dark:text-red-400' : 'text-transparent';
 
                         dayHtml = `
-                            <div class="rounded-lg p-2 border ${borderClass} ${bgClass} min-h-[110px] flex flex-col justify-between">
+                            <div class="date-box rounded-lg p-2 border ${borderClass} ${bgClass} min-h-[110px] flex flex-col justify-between">
                                 <div class="flex justify-between items-start">
                                     <span class="text-xs font-semibold" style="color: var(--text-primary);">${String(cell.day).padStart(2, '0')}</span>
                                     ${trades > 0 ? '<i data-feather="calendar" class="h-4 w-4 text-gray-400"></i>' : ''}
@@ -1727,7 +1752,7 @@
                             </div>
                         `;
                     } else {
-                         dayHtml = `<div class="rounded-lg bg-gray-100/50 dark:bg-gray-800/20 min-h-[110px]"></div>`;
+                         dayHtml = `<div class="date-box rounded-lg bg-gray-100/50 dark:bg-gray-800/20 min-h-[110px]"></div>`;
                     }
                     weekRow.innerHTML += dayHtml;
                 });
@@ -1738,7 +1763,7 @@
                 const weeklyPnlColor = weeklyPnl > 0 ? 'text-green-600 dark:text-green-400' : weeklyPnl < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500';
 
                 const summaryDiv = document.createElement('div');
-                summaryDiv.className = 'w-full flex-shrink-0 rounded-lg p-3 flex flex-col justify-center text-center bg-gray-50 dark:bg-gray-800/50 min-h-[110px]';
+                summaryDiv.className = 'week-summary w-full flex-shrink-0 rounded-lg p-3 flex flex-col justify-center text-center bg-gray-50 dark:bg-gray-800/50 min-h-[110px]';
                 summaryDiv.innerHTML = `
                     <p class="text-xs font-medium" style="color: var(--text-secondary);">Week ${weekIndex + 1}</p>
                     <p class="font-bold text-xl my-1 ${weeklyPnlColor}">${formatCurrency(weeklyPnl)}</p>
@@ -2512,9 +2537,4 @@
     </script>
 </body>
 </html>
-
-
-
-
-
 
