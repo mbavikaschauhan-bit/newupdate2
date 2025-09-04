@@ -894,7 +894,9 @@
             onSnapshot,
             serverTimestamp,
             orderBy,
-            writeBatch
+            writeBatch,
+            limit,
+            getDocs
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Your web app's Firebase configuration
@@ -1048,13 +1050,13 @@
                 appState.unsubscribeTrades();
                 appState.unsubscribeLedger();
                 appState.unsubscribeProfile();
-                appState.unsubscribeChallenge();
-                appState.unsubscribeChallengeHistory();
-                appState.unsubscribeAchievements();
+            appState.unsubscribeChallenge();
+            appState.unsubscribeChallengeHistory();
+            appState.unsubscribeAchievements();
 
-                setupFirestoreListeners();
-                
-                navigateTo('dashboard');
+            setupFirestoreListeners();
+            
+            navigateTo('dashboard');
                 applyTheme(); // Apply theme after user is authenticated and UI is ready
             } else {
                 try {
@@ -1116,9 +1118,11 @@
             });
 
             // --- Challenge Listener ---
-            const challengeRef = doc(db, `artifacts/${appId}/users/${userId}/challenge`, 'current');
-            appState.unsubscribeChallenge = onSnapshot(challengeRef, (doc) => {
-                if(doc.exists()){
+            const challengesRef = collection(db, `artifacts/${appId}/users/${userId}/challenges`);
+            const qChallenge = query(challengesRef, where("status", "==", "active"), limit(1));
+            appState.unsubscribeChallenge = onSnapshot(qChallenge, (snapshot) => {
+                if (!snapshot.empty) {
+                    const doc = snapshot.docs[0];
                     appState.challenge = { id: doc.id, ...doc.data() };
                 } else {
                     appState.challenge = null;
@@ -1127,10 +1131,16 @@
             });
 
             // --- Challenge History Listener ---
-            const historyRef = collection(db, `artifacts/${appId}/users/${userId}/challengeHistory`);
-            const qHistory = query(historyRef, orderBy("completedAt", "desc"));
+            const qHistory = query(challengesRef, where("status", "in", ["completed", "failed"]));
             appState.unsubscribeChallengeHistory = onSnapshot(qHistory, (snapshot) => {
-                appState.challengeHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Sort client-side to avoid needing a composite index
+                history.sort((a, b) => {
+                    const dateA = a.completedAt ? a.completedAt.toDate() : 0;
+                    const dateB = b.completedAt ? b.completedAt.toDate() : 0;
+                    return dateB - dateA; // descending
+                });
+                appState.challengeHistory = history;
                 renderChallengeHistory();
             }, (error) => {
                 console.error("Error fetching challenge history:", error);
@@ -1325,6 +1335,10 @@
                 reasons: document.getElementById('reasons').value,
                 updatedAt: serverTimestamp()
             };
+
+            if (appState.challenge && appState.challenge.id) {
+                tradeData.challengeId = appState.challenge.id;
+            }
 
             try {
                 const userId = appState.user.uid;
@@ -1922,12 +1936,23 @@
                 timeframe: parseInt(document.getElementById('timeframe').value),
                 maxRisk: parseFloat(document.getElementById('max-risk').value),
                 createdAt: serverTimestamp(),
+                status: 'active'
             };
             
             try {
                 const userId = appState.user.uid;
-                const challengeRef = doc(db, `artifacts/${appId}/users/${userId}/challenge`, 'current');
-                await setDoc(challengeRef, challengeData);
+                const challengesRef = collection(db, `artifacts/${appId}/users/${userId}/challenges`);
+
+                const q = query(challengesRef, where("status", "==", "active"));
+                const activeChallengeSnap = await getDocs(q);
+
+                if (!activeChallengeSnap.empty) {
+                    showToast("An active challenge already exists. Please complete it first.", "error");
+                    toggleSpinner(button, false);
+                    return;
+                }
+
+                await addDoc(challengesRef, challengeData);
                 showToast("Challenge set successfully!", "success");
                 challengeModal.classList.add('hidden');
             } catch(error) {
@@ -1950,41 +1975,36 @@
         const completeChallenge = async (status, finalStats) => {
             if (!appState.user || !appState.challenge) return;
             const userId = appState.user.uid;
+            const challengeId = appState.challenge.id;
 
             const batch = writeBatch(db);
 
-            // 1. Add to history
-            const historyRef = collection(db, `artifacts/${appId}/users/${userId}/challengeHistory`);
-            const newHistoryDocRef = doc(historyRef);
-            
-            const historyData = {
-                ...appState.challenge,
+            // 1. Update the challenge document status and stats
+            const challengeRef = doc(db, `artifacts/${appId}/users/${userId}/challenges`, challengeId);
+            const updateData = {
                 ...finalStats,
                 status: status,
                 completedAt: serverTimestamp()
             };
-            historyData.createdAt = appState.challenge.createdAt;
-            batch.set(newHistoryDocRef, historyData);
+            batch.update(challengeRef, updateData);
 
-            // 2. Award achievement badge if completed
-            if (status === 'Completed') {
+            // 2. Award achievement badge if completed successfully
+            if (status === 'completed') {
                 const achievementRef = collection(db, `artifacts/${appId}/users/${userId}/achievements`);
                 const newAchievementDocRef = doc(achievementRef);
                 const badgeType = determineBadgeType(finalStats);
                 batch.set(newAchievementDocRef, {
                     badge: badgeType,
+                    challengeId: challengeId,
                     challengeDetails: `Target: ${formatCurrency(appState.challenge.targetCapital)} in ${appState.challenge.timeframe} days.`,
                     awardedAt: serverTimestamp()
                 });
             }
 
-            // 3. Delete current challenge
-            const currentChallengeRef = doc(db, `artifacts/${appId}/users/${userId}/challenge`, 'current');
-            batch.delete(currentChallengeRef);
-
             try {
                 await batch.commit();
-                showToast(`Challenge ${status}!`, status === 'Completed' ? 'success' : 'info');
+                const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
+                showToast(`Challenge ${displayStatus}!`, status === 'completed' ? 'success' : 'info');
             } catch (error) {
                 console.error("Error completing challenge: ", error);
                 showToast("Error updating challenge status.", "error");
@@ -2022,47 +2042,14 @@
             const daysPassed = Math.max(0, Math.floor((now - challengeStartDate) / (1000 * 60 * 60 * 24)));
             const daysRemaining = Math.max(0, totalDays - daysPassed);
 
-            // Get the completion date of the most recently completed challenge to prevent data overlap.
-            const lastChallengeCompletionDate = appState.challengeHistory?.[0]?.completedAt?.toDate();
-
             // --- Filter Data for Challenge Period ---
             const challengeTrades = trades
-                .filter(t => {
-                    if (!t.exitDate) return false;
-                    const exitDate = t.exitDate.toDate();
-                    // Trade must have been closed on or after the challenge start date.
-                    const isAfterStart = exitDate >= challengeStartDate;
-                    if (!isAfterStart) return false;
-                    // If there is a previously completed challenge, the trade must have been closed AFTER it was completed.
-                    if (lastChallengeCompletionDate) {
-                        return exitDate > lastChallengeCompletionDate;
-                    }
-                    // If there is no history, this is the first challenge, so the start date check is sufficient.
-                    return true;
-                })
+                .filter(t => t.challengeId === challenge.id && t.exitDate)
                 .sort((a, b) => a.exitDate.toDate() - b.exitDate.toDate());
-
-            const challengeLedger = ledger.filter(l => {
-                const ledgerDate = l.date.toDate();
-                // Ledger entry must be on or after the challenge start date.
-                const isAfterStart = ledgerDate >= challengeStartDate;
-                if (!isAfterStart) return false;
-
-                // If there is a previously completed challenge, the ledger entry must be dated AFTER it was completed.
-                if (lastChallengeCompletionDate) {
-                    return ledgerDate > lastChallengeCompletionDate;
-                }
-                
-                // If there is no history, this is the first challenge, so the start date check is sufficient.
-                return true;
-            });
 
             // --- Core Metric Calculations ---
             const netPnl = challengeTrades.reduce((sum, t) => sum + calculateNetPnl(t), 0);
-            const deposits = challengeLedger.filter(l => l.type === 'Deposit').reduce((sum, l) => sum + l.amount, 0);
-            const withdrawals = challengeLedger.filter(l => l.type === 'Withdrawal').reduce((sum, l) => sum + l.amount, 0);
-
-            const currentCapital = challenge.startingCapital + netPnl + deposits - withdrawals;
+            const currentCapital = challenge.startingCapital + netPnl;
             const profitNeeded = challenge.targetCapital - challenge.startingCapital;
             const profitMade = currentCapital - challenge.startingCapital;
             const progress = profitNeeded > 0 ? Math.max(0, Math.min(100, (profitMade / profitNeeded) * 100)) : 100;
@@ -2112,12 +2099,12 @@
             };
 
             if (currentCapital >= challenge.targetCapital) {
-                completeChallenge('Completed', finalStats);
+                completeChallenge('completed', finalStats);
                 return; // Stop rendering the active view
             }
 
             if (now > challengeEndDate) {
-                completeChallenge('Failed', finalStats);
+                completeChallenge('failed', finalStats);
                 return; // Stop rendering the active view
             }
 
@@ -2171,7 +2158,7 @@
             }
 
             container.innerHTML = appState.challengeHistory.map(hist => {
-                const isCompleted = hist.status === 'Completed';
+                const isCompleted = hist.status === 'completed';
                 const profitMade = hist.finalCapital - hist.startingCapital;
 
                 return `
@@ -2186,7 +2173,7 @@
                                 <p class="text-sm font-semibold ${profitMade >= 0 ? 'text-green-500' : 'text-red-500'}">${formatCurrency(profitMade)}</p>
                                 <p class="text-xs" style="color: var(--text-muted);">Net Profit</p>
                             </div>
-                            <span class="text-sm font-semibold px-3 py-1 rounded-full ${isCompleted ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${hist.status}</span>
+                            <span class="text-sm font-semibold px-3 py-1 rounded-full ${isCompleted ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${hist.status.charAt(0).toUpperCase() + hist.status.slice(1)}</span>
                        </div>
                     </div>
                 </div>
@@ -2525,5 +2512,9 @@
     </script>
 </body>
 </html>
+
+
+
+
 
 
