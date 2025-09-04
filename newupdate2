@@ -209,7 +209,6 @@
           background-color: #fafafa !important;
           border: 2px solid #bbb !important; /* more visible border */
           border-radius: 6px;
-          color: #222;
         }
 
         /* Light background + visible outline for weekly summary boxes */
@@ -217,8 +216,41 @@
           background-color: #f5f5f5 !important;
           border: 2px solid #999 !important; /* darker border for emphasis */
           border-radius: 10px;
-          color: #111;
           padding: 6px;
+        }
+
+        /* Brighter Calendar Text */
+        .weekday-header {
+            font-weight: 600;
+        }
+        .date-box .date-number {
+            font-weight: 600;
+            font-size: 0.875rem; /* 14px */
+            color: var(--text-primary);
+        }
+        .week-summary .week-label {
+            font-weight: 600;
+            font-size: 0.875rem; /* 14px */
+            color: var(--text-secondary);
+        }
+
+        /* Dark Theme Overrides for Calendar Visibility */
+        [data-theme="dark"] .weekday-header {
+            background-color: #2a3a4b !important;
+            border-color: #4a5a6b !important;
+            color: #e5e7eb; /* Brighter text for dark mode */
+        }
+        [data-theme="dark"] .date-box {
+            background-color: #1b263b !important;
+            border-color: #444 !important;
+        }
+        [data-theme="dark"] .week-summary {
+            background-color: #2a3a4b !important;
+            border-color: #6b7280 !important;
+        }
+        [data-theme="dark"] .date-box .date-number,
+        [data-theme="dark"] .week-summary .week-label {
+             color: #f9fafb;
         }
 
     </style>
@@ -1740,7 +1772,7 @@
                         dayHtml = `
                             <div class="date-box rounded-lg p-2 border ${borderClass} ${bgClass} min-h-[110px] flex flex-col justify-between">
                                 <div class="flex justify-between items-start">
-                                    <span class="text-xs font-semibold" style="color: var(--text-primary);">${String(cell.day).padStart(2, '0')}</span>
+                                    <span class="date-number">${String(cell.day).padStart(2, '0')}</span>
                                     ${trades > 0 ? '<i data-feather="calendar" class="h-4 w-4 text-gray-400"></i>' : ''}
                                 </div>
                                 ${trades > 0 ? `
@@ -1765,15 +1797,15 @@
                 const summaryDiv = document.createElement('div');
                 summaryDiv.className = 'week-summary w-full flex-shrink-0 rounded-lg p-3 flex flex-col justify-center text-center bg-gray-50 dark:bg-gray-800/50 min-h-[110px]';
                 summaryDiv.innerHTML = `
-                    <p class="text-xs font-medium" style="color: var(--text-secondary);">Week ${weekIndex + 1}</p>
+                    <p class="week-label">Week ${weekIndex + 1}</p>
                     <p class="font-bold text-xl my-1 ${weeklyPnlColor}">${formatCurrency(weeklyPnl)}</p>
-                    <p class="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 inline-block mx-auto" style="color: var(--text-muted);">${daysTraded} day${daysTraded === 1 ? '' : 's'}</p>
+                    <p class="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 inline-block mx-auto">${daysTraded} day${daysTraded === 1 ? '' : 's'}</p>
                 `;
                 calendarSummariesGrid.appendChild(summaryDiv);
             });
             
             monthlyPnlDisplay.textContent = `Monthly P&L: ${formatCurrency(monthlyPnl)}`;
-            monthlyPnlDisplay.className = `font-semibold ${monthlyPnl >= 0 ? 'text-green-500' : monthlyPnl < 0 ? 'text-red-500' : ''}`;
+            monthlyPnlDisplay.className = `font-semibold ${monthlyPnl > 0 ? 'text-green-500' : monthlyPnl < 0 ? 'text-red-500' : ''}`;
             feather.replace();
         };
             
@@ -2537,4 +2569,6 @@
     </script>
 </body>
 </html>
+
+
 
